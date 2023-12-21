@@ -21,32 +21,32 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
   return {
     name: "fuzzmap",
     visitor: {
-      BlockStatement(path) {
-        const node_id = path.node.start;
-        if (processed.has(node_id)) {
-          return;
-        }
-        const hit = template(`
-                  // if (typeof window !== 'undefined') {
-                    if (window.Fuzzer) {
-                      window.Fuzzer.hit(HIT_ID);
-                    }
-                  // }
-                `)({
-          HIT_ID: numericLiteral(curr_hit_id++),
-        });
-        // save newly made hit() template node ids to processed:
-        if (hit instanceof Array) {
-          hit.forEach((node) => {
-            processed.add(node.start);
-          });
-        } else {
-          processed.add(hit.start);
-        }
-        // console.log('added block stmt', path)
-        path.unshiftContainer("body", hit);
-        // processed.add(node_id);
-      },
+      // BlockStatement(path) {
+      //   const node_id = path.node.start;
+      //   if (processed.has(node_id)) {
+      //     return;
+      //   }
+      //   const hit = template(`
+      //             // if (typeof window !== 'undefined') {
+      //               if (window.Fuzzer) {
+      //                 window.Fuzzer.hit(HIT_ID);
+      //               }
+      //             // }
+      //           `)({
+      //     HIT_ID: numericLiteral(curr_hit_id++),
+      //   });
+      //   // save newly made hit() template node ids to processed:
+      //   if (hit instanceof Array) {
+      //     hit.forEach((node) => {
+      //       processed.add(node.start);
+      //     });
+      //   } else {
+      //     processed.add(hit.start);
+      //   }
+      //   // console.log('added block stmt', path)
+      //   path.unshiftContainer("body", hit);
+      //   // processed.add(node_id);
+      // },
       JSXOpeningElement(path: NodePath<JSXOpeningElement>) {
         path.node.attributes.forEach((attribute) => {
           if (

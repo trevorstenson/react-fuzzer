@@ -1,18 +1,15 @@
 import html2canvas from "html2canvas";
 import debounce from "lodash.debounce";
 import { isEqual } from "lodash";
-
-
-type Hitmap = Map<number, number>;
-type HitmapHash = string;
-
-type FuzzAction = {
-  id: number;
-  elm: HTMLElement;
-  type: "click" | "input";
-};
-
-type StateId = number;
+import {
+  FuzzAction,
+  FuzzerOutput,
+  Hitmap,
+  HitmapHash,
+  ResultMap,
+  StateMap,
+} from "./types";
+// import { Viewer } from "./viewer";
 
 const FUZZ_INPUT = {
   // "button":
@@ -26,28 +23,26 @@ export class Fuzzer {
   last_hit_map: Hitmap = new Map();
   curr_hit_map: Hitmap = new Map();
   // not using yet:
-  states = new Map<HitmapHash, StateId>();
+  states: StateMap = new Map();
+  // track in index to show what states were added when. ex: any state gotten to from the
+  // initial state, will have an index of 1. any state reached from any of those states will have an index of 2.
+  // if we reach a state that we've already seen, we can just use the index of that state.
+  state_ticks: Map<string, number> = new Map();
 
   queue: {
     state: HitmapHash;
     action: FuzzAction;
   }[] = [];
 
-  result_map: Map<
-    {
-      start_hitmap: HitmapHash;
-      action_id: number; // idk
-    },
-    {
-      hitmap: HitmapHash;
-      html: string;
-      img_capture: string;
-    }
-  > = new Map();
+  result_map: ResultMap = new Map();
   initialized: boolean = false;
 
-  constructor() {
-    // console.log("made fuzzer2");
+  constructor() {}
+
+  private initialize() {
+    this.last_hit_map = this.curr_hit_map;
+    this.initialized = true;
+    this.ensure_state_exists(hash_hit_map(this.curr_hit_map));
   }
 
   set_root_element(elm: HTMLElement): void {
@@ -55,14 +50,11 @@ export class Fuzzer {
   }
 
   private debounced_ready = debounce(() => {
-    // console.log('got initial state trace', this.curr_hit_map);
-    this.last_hit_map = this.curr_hit_map;
-    this.initialized = true;
-    console.log('initialized')
+    this.initialize();
   }, 100);
 
   hit(id: number): void {
-    // if (!this.running) return; 
+    // if (!this.running) return;
     // console.log("history", id);
     if (this.curr_hit_map.has(id)) {
       this.curr_hit_map.set(id, this.curr_hit_map.get(id)! + 1);
@@ -75,14 +67,13 @@ export class Fuzzer {
     // this.curr_hit_map.push(id);
   }
 
-  async execute(): Promise<void> {
+  async execute(): Promise<FuzzerOutput> {
     if (!this.root_element) {
-      console.error("needs to have root element");
-      return;
+      throw new Error("root element not set");
     }
     if (!this.initialized) {
       console.error("not initialized yet");
-      this.initialized = true;
+      this.initialize();
       // return;
     }
     const start_inputs = this.prep_inputs();
@@ -93,12 +84,15 @@ export class Fuzzer {
         action: input,
       };
     });
-    console.log('initial queue', this.queue.map(x => {
-      return {
-        state: x.state,
-        action: x.action.id,
-      }
-    }));
+    console.log(
+      "initial queue",
+      this.queue.map((x) => {
+        return {
+          state: x.state,
+          action: x.action.id,
+        };
+      })
+    );
     while (this.queue.length > 0) {
       // find the first entry in queue that starts from my current state, remove it, and execute:
       const first_valid_input = this.queue.findIndex((curr_input) => {
@@ -106,7 +100,6 @@ export class Fuzzer {
       });
       if (first_valid_input === -1) {
         console.error("no valid inputs");
-        this.finish();
         break;
       }
       const curr_input = this.queue.splice(first_valid_input, 1)[0];
@@ -128,11 +121,12 @@ export class Fuzzer {
         if (
           this.queue.some((i) => {
             return (
-              i.action.id === input.id && isEqual(i.state, hash_hit_map(this.curr_hit_map))
+              i.action.id === input.id &&
+              isEqual(i.state, hash_hit_map(this.curr_hit_map))
             );
           })
         ) {
-          console.log('stop', this.queue, this.curr_hit_map)
+          console.log("stop", this.queue, this.curr_hit_map);
           return;
         }
         // if its already in the result map, don't add it to the queue:
@@ -145,16 +139,27 @@ export class Fuzzer {
             );
           })
         ) {
-          console.log('stop 2', this.queue, hash_hit_map(this.curr_hit_map));
+          console.log("stop 2", this.queue, hash_hit_map(this.curr_hit_map));
           return;
         }
-        console.log("at state", hash_hit_map(this.curr_hit_map), "enqueue", input);
+        console.log(
+          "at state",
+          hash_hit_map(this.curr_hit_map),
+          "enqueue",
+          input
+        );
         this.queue.push({
           state: hash_hit_map(this.curr_hit_map),
           action: input,
         });
       });
     }
+    // this.finish();
+    return {
+      result_map: this.result_map,
+      states: this.states,
+      state_ticks: this.state_ticks,
+    };
   }
 
   private async execute_action(action: FuzzAction): Promise<void> {
@@ -162,11 +167,13 @@ export class Fuzzer {
       // start_hitmap: hash_hit_map(this.last_hit_map),
       start_hitmap: hash_hit_map(this.last_hit_map),
       action_id: action.id,
+      description: "",
     };
     this.last_hit_map = this.curr_hit_map;
     this.curr_hit_map.clear();
     if (action.type === "click") {
       action.elm.click(); // change to find elm here i imagine...
+      key.description = `click ${action.id}: ${action.elm.innerText}`;
     }
     // TODO: better way to wait for 'static' page. (all relevant elements are loaded, etc.)
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -178,11 +185,18 @@ export class Fuzzer {
       html: curr_html,
       img_capture: screenshot.toDataURL(),
     });
-    // create new state id if it doesn't exist:
-    if (!this.states.has(hash_hit_map(this.curr_hit_map))) {
-      this.states.set(hash_hit_map(this.curr_hit_map), this.states.size);
+    this.ensure_state_exists(hash_hit_map(this.curr_hit_map));
+    if (!this.state_ticks.has(hash_hit_map(this.curr_hit_map))) {
+      // state tick should be source state tick + 1
+      const source_state_tick = this.state_ticks.get(key.start_hitmap) || 0;
+      this.state_ticks.set(hash_hit_map(this.curr_hit_map), source_state_tick + 1);
     }
-    // console.log('insert into result map', key, this.result_map.get(key));
+  }
+
+  // create new identifier for the state if it doesn't exist yet
+  private ensure_state_exists(state: HitmapHash): void {
+    if (this.states.has(state)) return;
+    this.states.set(state, this.states.size);
   }
 
   private prep_inputs(): FuzzAction[] {
@@ -225,14 +239,8 @@ export class Fuzzer {
       return img;
     });
     containing_div.innerHTML = image_elms.map((img) => img.outerHTML).join("");
-    // containing_div.innerHTML = [...this.result_map.values()]
-    //   .map((result) => {
-    //     // return divs containing the html:
-    //     return `<div>${result.html}</div>`;
-    //   })
-    //   .join("");
     document.body.appendChild(containing_div);
-    console.log('all found states:', this.states);
+    console.log("all found states:", this.states);
   }
 
   reset(): void {
@@ -242,7 +250,7 @@ export class Fuzzer {
     this.curr_hit_map.clear();
     this.last_hit_map.clear();
     this.queue = [];
-    // this.states.clear();
+    this.states.clear();
   }
 }
 
@@ -264,7 +272,7 @@ export class Fuzzer {
 
 function hash_hit_map(hit_map: Hitmap): HitmapHash {
   // simple way to reliably hash the hitmap to allow for equality checks
-  return [...hit_map.entries()].join(',');
+  return [...hit_map.entries()].join(",");
 }
 
 function maps_equal(a: Hitmap, b: Hitmap): boolean {

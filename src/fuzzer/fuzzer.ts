@@ -135,7 +135,6 @@ export class Fuzzer {
             return (
               key.action_id === input.id &&
               isEqual(key.start_hitmap, hash_hit_map(this.curr_hit_map))
-              // maps_equal(key.start_hitmap, this.curr_hit_map)
             );
           })
         ) {

@@ -54,7 +54,7 @@ const CustomEdge: FC<EdgeProps> = ({
       <BaseEdge
         id={id}
         path={edgePath}
-        style={{ stroke: "green", strokeWidth: 4 }} // Arrow body color changed to green
+        style={{ stroke: "black", strokeWidth: 4 }} // Arrow body color changed to green
         markerEnd={`url(#${markerId})`} // Reference the arrow marker
       />
       <svg width="0" height="0">
@@ -74,7 +74,7 @@ const CustomEdge: FC<EdgeProps> = ({
           </marker>
         </defs>
       </svg>
-      <foreignObject width="100%" height="100%">
+      <foreignObject width="2000px" height="2000px">
         <svg width="100%" height="100%">
           <text fill="red">
             <textPath

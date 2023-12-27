@@ -19,7 +19,7 @@ export type ResultMap = Map<FuzzerResultKey, FuzzerResultValue>;
 export type FuzzAction = {
   id: number;
   elm: HTMLElement;
-  type: "click" | "input";
+  type: "click" | "radio" | "input";
 };
 
 export type FuzzerOutput = {

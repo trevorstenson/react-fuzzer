@@ -173,6 +173,13 @@ export class Fuzzer {
     if (action.type === "click") {
       action.elm.click(); // change to find elm here i imagine...
       key.description = `click ${action.id}: ${action.elm.innerText}`;
+    } else if (action.type === "radio") {
+      (action.elm as HTMLInputElement).checked = !(
+        action.elm as HTMLInputElement
+      ).checked;
+      key.description = `radio ${action.id}: ${action.elm.innerText} to ${
+        (action.elm as HTMLInputElement).checked
+      }`;
     }
     // TODO: better way to wait for 'static' page. (all relevant elements are loaded, etc.)
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -188,7 +195,10 @@ export class Fuzzer {
     if (!this.state_ticks.has(hash_hit_map(this.curr_hit_map))) {
       // state tick should be source state tick + 1
       const source_state_tick = this.state_ticks.get(key.start_hitmap) || 0;
-      this.state_ticks.set(hash_hit_map(this.curr_hit_map), source_state_tick + 1);
+      this.state_ticks.set(
+        hash_hit_map(this.curr_hit_map),
+        source_state_tick + 1
+      );
     }
   }
 
@@ -211,6 +221,18 @@ export class Fuzzer {
         id: i,
         elm: button,
         type: "click",
+      });
+    });
+    const radios = document.querySelectorAll("input[type=radio]");
+    radios.forEach((radio, i) => {
+      const fuzz_id = radio.getAttribute("data-fuzz-id");
+      if (!fuzz_id) {
+        return;
+      }
+      fuzz_actions.push({
+        id: i,
+        elm: radio as HTMLElement,
+        type: "radio",
       });
     });
     return fuzz_actions;
@@ -272,6 +294,15 @@ export class Fuzzer {
 function hash_hit_map(hit_map: Hitmap): HitmapHash {
   // simple way to reliably hash the hitmap to allow for equality checks
   return [...hit_map.entries()].join(",");
+}
+
+function clamp_hit_map(hit_map: Hitmap): Hitmap {
+  // clamp the hitmap values to 1
+  const new_map = new Map();
+  for (const key of hit_map.keys()) {
+    new_map.set(key, 1);
+  }
+  return new_map;
 }
 
 function maps_equal(a: Hitmap, b: Hitmap): boolean {

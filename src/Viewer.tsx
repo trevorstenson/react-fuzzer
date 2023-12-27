@@ -96,33 +96,33 @@ const findClosestHandles = (
   return { sourceHandle, targetHandle };
 };
 
-function ResultNode({ data }: { data: any }) {
+function ResultNode({ data }: { data: {
+  label: string;
+  img_data: string;
+} }) {
   const img_data = data.img_data;
   return (
-    // <div className="max-w-[300px]">
-    //   <Handle type="target" position={Position.Left} />
-    //   <Handle type="source" position={Position.Right} />
-    //   <div>{data.label}</div>
-    //   <div>
-    //     <img src={img_data} />
-    //   </div>
-    // </div>
-    <div className="max-w-[300px]">
-      <Handle type="target" position={Position.Top} id="t" />
-      <Handle type="target" position={Position.Right} id="r" />
-      <Handle type="target" position={Position.Bottom} id="b" />
-      <Handle type="target" position={Position.Left} id="l" />
-      <Handle type="source" position={Position.Top} id="t" />
-      <Handle type="source" position={Position.Right} id="r" />
-      <Handle type="source" position={Position.Bottom} id="b" />
-      <Handle type="source" position={Position.Left} id="l" />
-      <div>{data.label}</div>
+    <div className="max-w-[200px] relative">
+      <Handle type="target" position={Position.Top} id="t" style={{ left: '45%' }} />
+      <Handle type="source" position={Position.Top} id="t" style={{ left: '55%' }} />
+
+      <Handle type="target" position={Position.Right} id="r" style={{ top: '45%' }} />
+      <Handle type="source" position={Position.Right} id="r" style={{ top: '55%' }} />
+
+      <Handle type="target" position={Position.Bottom} id="b" style={{ left: '55%' }} />
+      <Handle type="source" position={Position.Bottom} id="b" style={{ left: '45%' }} />
+
+      <Handle type="target" position={Position.Left} id="l" style={{ top: '55%' }} />
+      <Handle type="source" position={Position.Left} id="l" style={{ top: '45%' }} />
+
+      <div className="-mt-6">{data.label}</div>
       <div>
         <img src={img_data} />
       </div>
     </div>
   );
 }
+
 
 // generates a graphical representation of all states encountered during fuzzing
 function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
@@ -146,10 +146,6 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
     }),
     []
   );
-  // const fmap_entries = useMemo(() => {
-  //   if (!fuzz_output) return [];
-  //   return [...fuzz_output.result_map.entries()];
-  // }, [fuzz_output]);
 
   useEffect(() => {
     if (!fuzz_output) return;
@@ -178,8 +174,10 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
             type: "resultNode",
             data: { label: state_id || "Start", img_data: img_data },
             position: {
-              x: 500 * (parseInt(tick) ?? 0),
-              y: 300 * i + 25,
+              // x: 500 * (parseInt(tick) ?? 0),
+              // y: 300 * i + 25,
+              y: 400 * (parseInt(tick) ?? 0),
+              x: 300 * i + 25,
             },
             style: {
               color: "black",
@@ -227,7 +225,7 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
 
   if (!fuzz_output) return null;
   return (
-    <div className="h-[600px] w-full bg-gray-300">
+    <div className="h-full w-full bg-gray-300">
       <ReactFlow
         nodes={nodes}
         nodeTypes={nodeTypes}

@@ -24,8 +24,8 @@ export default function SelfConnecting(props: EdgeProps) {
 
   const { sourceX, sourceY, targetX, targetY, id } = props;
   const radiusX = (sourceX - targetX) * 0.6;
-  const radiusY = 100;
-  const edgePath = `M ${sourceX - 5} ${sourceY} A ${radiusX} ${radiusY} 0 1 0 ${
+  const radiusY = 50;
+  const edgePath = `M ${sourceX - 5} ${sourceY} A ${radiusX} ${radiusY} 0 1 1 ${
     targetX + 2
   } ${targetY}`;
   const edgePathId = `edgepath-${id}`;

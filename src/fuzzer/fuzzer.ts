@@ -9,7 +9,6 @@ import {
   ResultMap,
   StateMap,
 } from "./types";
-// import { Viewer } from "./viewer";
 
 const FUZZ_INPUT = {
   // "button":
@@ -64,7 +63,6 @@ export class Fuzzer {
     if (!this.initialized) {
       this.debounced_ready();
     }
-    // this.curr_hit_map.push(id);
   }
 
   async execute(): Promise<FuzzerOutput> {
@@ -84,15 +82,7 @@ export class Fuzzer {
         action: input,
       };
     });
-    console.log(
-      "initial queue",
-      this.queue.map((x) => {
-        return {
-          state: x.state,
-          action: x.action.id,
-        };
-      })
-    );
+    // console.log("initial queue", structuredClone(this.queue));
     while (this.queue.length > 0) {
       // find the first entry in queue that starts from my current state, remove it, and execute:
       const first_valid_input = this.queue.findIndex((curr_input) => {
@@ -100,6 +90,8 @@ export class Fuzzer {
       });
       if (first_valid_input === -1) {
         console.error("no valid inputs");
+        // TODO: implement traveling to different states when we hit a dead end.
+        // Need traveling to not count against fuzz results.
         break;
       }
       const curr_input = this.queue.splice(first_valid_input, 1)[0];
@@ -107,15 +99,7 @@ export class Fuzzer {
       await this.execute_action(curr_input.action);
       // add all new inputs to the queue:
       const inputs = this.prep_inputs();
-      console.log(
-        "cur queue",
-        this.queue.map((x) => {
-          return {
-            state: x.state,
-            action: x.action.id,
-          };
-        })
-      );
+      // console.log("cur queue", structuredClone(this.queue));
       inputs.forEach((input) => {
         // ensure we don't add the same input twice:
         if (
@@ -126,7 +110,7 @@ export class Fuzzer {
             );
           })
         ) {
-          console.log("stop", this.queue, this.curr_hit_map);
+          console.log("dont add input twice", this.queue, this.curr_hit_map);
           return;
         }
         // if its already in the result map, don't add it to the queue:
@@ -138,7 +122,7 @@ export class Fuzzer {
             );
           })
         ) {
-          console.log("stop 2", this.queue, hash_hit_map(this.curr_hit_map));
+          console.log("unnecessary because in results already", this.queue, hash_hit_map(this.curr_hit_map));
           return;
         }
         console.log(
@@ -182,7 +166,7 @@ export class Fuzzer {
       }`;
     }
     // TODO: better way to wait for 'static' page. (all relevant elements are loaded, etc.)
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 250));
     const curr_html = this.root_element?.innerHTML || "";
     // create screenshot of the root elm and store it in the result_map
     const screenshot = await html2canvas(this.root_element!);
@@ -275,25 +259,11 @@ export class Fuzzer {
   }
 }
 
-// function hash_hit_map(hit_map: Map<number, number>): number {
-//   const sorted_values = [...hit_map.values()].sort();
-//   // Serialize and concatenate the sorted values
-//   const concatenated = sorted_values
-//     .map((value) => JSON.stringify(value))
-//     .join("");
-//   // Apply a simple hash function (you can replace this with a more robust hash function)
-//   let hash = 0;
-//   for (let i = 0; i < concatenated.length; i++) {
-//     const char = concatenated.charCodeAt(i);
-//     hash = (hash << 5) - hash + char;
-//     hash |= 0; // Convert to 32bit integer
-//   }
-//   return hash;
-// }
-
 function hash_hit_map(hit_map: Hitmap): HitmapHash {
+  const clamped = clamp_hit_map(hit_map);
   // simple way to reliably hash the hitmap to allow for equality checks
-  return [...hit_map.entries()].join(",");
+  // return [...hit_map.entries()].join(",");
+  return [...clamped.entries()].join(",");
 }
 
 function clamp_hit_map(hit_map: Hitmap): Hitmap {
@@ -303,17 +273,4 @@ function clamp_hit_map(hit_map: Hitmap): Hitmap {
     new_map.set(key, 1);
   }
   return new_map;
-}
-
-function maps_equal(a: Hitmap, b: Hitmap): boolean {
-  // if (a.size !== b.size) {
-  //   return false;
-  // }
-  // for (const [key, value] of a) {
-  //   if (b.get(key) !== value) {
-  //     return false;
-  //   }
-  // }
-  // return true;
-  return isEqual([...a.entries()], [...b.entries()]);
 }

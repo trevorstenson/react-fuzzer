@@ -42,31 +42,6 @@ function App() {
     }
   };
 
-  // return (
-  //   <>
-  //     <div className="flex flex-col w-full">
-  //       <div className="flex flex-row w-full h-[400px]">
-  //         <textarea
-  //           spellCheck={false}
-  //           className="w-1/2 bg-gray-100 text-black"
-  //           value={code}
-  //           onChange={handleCodeChange}
-  //           placeholder="Paste your React component code here"
-  //         />
-  //         <div
-  //           id="component-container"
-  //           className="border-2 border-red w-1/2"
-  //         >
-  //           {renderedComponent}
-  //         </div>
-  //       </div>
-  //       <button className="mt-4 w-1/3 p-2 bg-indigo-500" onClick={runComponent}>Run Component</button>
-  //       <Viewer fuzz_output={fuzzOutput} />
-  //       {/* <CytoViewer fuzz_output={fuzzOutput} /> */}
-  //     </div>
-  //   </>
-  // );
-
   return (
     <div className="flex flex-row w-full h-screen">
       <div className="flex flex-col w-2/5 h-full">

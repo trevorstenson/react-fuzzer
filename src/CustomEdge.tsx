@@ -1,6 +1,7 @@
-import React, { FC } from "react";
+import React, { FC, useState } from "react";
 import { EdgeProps, getBezierPath, BaseEdge } from "reactflow";
 import { HandlePosition } from "./ui_types";
+import { edge_list } from "./Viewer";
 type Point = {
   x: number;
   y: number;
@@ -10,15 +11,17 @@ const calculateRightAnglePath = (
   source: Point,
   target: Point,
   sourceHandleType: HandlePosition,
+  offset_x: number,
+  offset_y: number
 ): string => {
-  let path = '';
-  if (sourceHandleType === 'l' || sourceHandleType === 'r') {
-    const midX = (source.x + target.x) / 2;
+  let path = "";
+  if (sourceHandleType === "l" || sourceHandleType === "r") {
+    const midX = (source.x + target.x) / 2 + offset_x;
     // Horizontal path segment first
     path = `M ${source.x},${source.y} L ${midX},${source.y} L ${midX},${target.y} L ${target.x},${target.y}`;
   } else {
-    // HandleType is 'top' or 'bottom'
-    const midY = (source.y + target.y) / 2;
+    // HandleType is 'top' or 'bottom', want a random offset of 20px
+    const midY = (source.y + target.y) / 2 + offset_y;
     // Vertical path segment first
     path = `M ${source.x},${source.y} L ${source.x},${midY} L ${target.x},${midY} L ${target.x},${target.y}`;
   }
@@ -31,7 +34,7 @@ const CustomEdge: FC<EdgeProps> = ({
   sourceY,
   targetX,
   targetY,
-  sourceHandleId = 'l',
+  sourceHandleId = "l",
   data,
 }) => {
   // const [edgePath] = getBezierPath({
@@ -44,7 +47,13 @@ const CustomEdge: FC<EdgeProps> = ({
   // });
   const source: Point = { x: sourceX, y: sourceY };
   const target: Point = { x: targetX, y: targetY };
-  const edgePath = calculateRightAnglePath(source, target, sourceHandleId as HandlePosition);
+  const edgePath = calculateRightAnglePath(
+    source,
+    target,
+    sourceHandleId as HandlePosition,
+    data.offset_x,
+    data.offset_y
+  );
 
   const edgePathId = `edgepath-${id}`;
   const markerId = `arrow-${id}`;
@@ -89,6 +98,12 @@ const CustomEdge: FC<EdgeProps> = ({
           </text>
         </svg>
       </foreignObject>
+      {/* <foreignObject width="100" height="50" x={(sourceX + targetX) / 2 - 50} y={(sourceY + targetY) / 2 - 25}>
+        <div xmlns="http://www.w3.org/1999/xhtml" className="edge-label">
+          <div className="edge-icon">&#x1F5B1;</div>
+          <div className="edge-text">{data.label}</div>
+        </div>
+      </foreignObject> */}
     </>
   );
 };

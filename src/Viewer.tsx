@@ -23,6 +23,22 @@ interface ClosestHandles {
   targetHandle: HandlePosition;
 }
 
+export const edge_list: any[] = [];
+
+const find_non_colliding_offset = (
+  new_edge: any,
+) => {
+  let offset_x = 0;
+  let offset_y = 0;
+  let collision_found = true;
+  while (collision_found) {
+    collision_found = false;
+    for (const edge of edge_list) {
+      if (edge.id === new_edge.id) continue;
+    }
+  }
+};
+
 const findClosestHandles = (
   nodes: Node[],
   sourceNodeId: string,
@@ -96,24 +112,68 @@ const findClosestHandles = (
   return { sourceHandle, targetHandle };
 };
 
-function ResultNode({ data }: { data: {
-  label: string;
-  img_data: string;
-} }) {
+function ResultNode({
+  data,
+}: {
+  data: {
+    label: string;
+    img_data: string;
+  };
+}) {
   const img_data = data.img_data;
   return (
     <div className="max-w-[200px] relative">
-      <Handle type="target" position={Position.Top} id="t" style={{ left: '45%' }} />
-      <Handle type="source" position={Position.Top} id="t" style={{ left: '55%' }} />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="t"
+        style={{ left: "30%", top: "20px" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="t"
+        style={{ left: "70%", top: "20px " }}
+      />
 
-      <Handle type="target" position={Position.Right} id="r" style={{ top: '45%' }} />
-      <Handle type="source" position={Position.Right} id="r" style={{ top: '55%' }} />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="r"
+        style={{ top: "30%" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="r"
+        style={{ top: "70%" }}
+      />
 
-      <Handle type="target" position={Position.Bottom} id="b" style={{ left: '55%' }} />
-      <Handle type="source" position={Position.Bottom} id="b" style={{ left: '45%' }} />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="b"
+        style={{ left: "70%" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="b"
+        style={{ left: "30%" }}
+      />
 
-      <Handle type="target" position={Position.Left} id="l" style={{ top: '55%' }} />
-      <Handle type="source" position={Position.Left} id="l" style={{ top: '45%' }} />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="l"
+        style={{ top: "70%" }}
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="l"
+        style={{ top: "30%" }}
+      />
 
       <div className="-mt-6">{data.label}</div>
       <div>
@@ -122,7 +182,6 @@ function ResultNode({ data }: { data: {
     </div>
   );
 }
-
 
 // generates a graphical representation of all states encountered during fuzzing
 function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
@@ -161,8 +220,8 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
       {} as { [tick: number]: string[] }
     );
     // console.log("state ticks", fuzz_output?.state_ticks, states_by_tick);
-    const new_nodes = Object.entries(states_by_tick).map(
-      ([tick, state_ids]) => {
+    const new_nodes = Object.entries(states_by_tick)
+      .map(([tick, state_ids]) => {
         const result: any[] = [];
         state_ids.forEach((state_id, i) => {
           // const state_index = fuzz_output.states.get(state_id)!;
@@ -185,15 +244,13 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
           });
         });
         return result;
-      }
-    ).flat();
+      })
+      .flat();
     // console.log("new nodes", new_nodes);
     setNodes(new_nodes);
     const edges = [...fuzz_output.result_map.entries()].map(([key, value]) => {
-      const {
-        sourceHandle,
-        targetHandle,
-      } = findClosestHandles(new_nodes, key.start_hitmap, value.hitmap) ?? {};
+      const { sourceHandle, targetHandle } =
+        findClosestHandles(new_nodes, key.start_hitmap, value.hitmap) ?? {};
       const edge: Edge = {
         // as string because reactflow doesn't like numbers
         id: Math.random() + "",
@@ -202,6 +259,8 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
         label: key.description,
         data: {
           label: key.description,
+          offset_x: (Math.random() * 2 - 1) * 40,
+          offset_y: (Math.random() * 2 - 1) * 40,
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,

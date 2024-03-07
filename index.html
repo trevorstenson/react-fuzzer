@@ -1,17 +1,45 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <!-- <script type="module">
+
+<head>
+  <!-- <script type="module">
       import process from 'process';
       window.process = process;
     </script> -->
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+  <style>
+    .edge-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 100px;
+      height: 50px;
+    }
+
+    .edge-text {
+      visibility: hidden;
+      white-space: nowrap;
+      position: absolute;
+      /* background-color: black; */
+      color: red;
+      padding: 2px 5px;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    .edge-label:hover .edge-text {
+      visibility: visible;
+    }
+  </style>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vite + React + TS</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

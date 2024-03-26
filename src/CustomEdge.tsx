@@ -1,7 +1,8 @@
 import React, { FC, useState } from "react";
-import { EdgeProps, getBezierPath, BaseEdge } from "reactflow";
+import { EdgeProps, getBezierPath, BaseEdge, useNodes } from "reactflow";
 import { HandlePosition } from "./ui_types";
-import { edge_list } from "./Viewer";
+import { getSmartEdge } from "@tisoap/react-flow-smart-edge";
+// import { edge_list } from "./Viewer";
 type Point = {
   x: number;
   y: number;
@@ -34,6 +35,8 @@ const CustomEdge: FC<EdgeProps> = ({
   sourceY,
   targetX,
   targetY,
+  sourcePosition,
+  targetPosition,
   sourceHandleId = "l",
   data,
 }) => {
@@ -47,6 +50,7 @@ const CustomEdge: FC<EdgeProps> = ({
   // });
   const source: Point = { x: sourceX, y: sourceY };
   const target: Point = { x: targetX, y: targetY };
+  const nodes = useNodes();
   const edgePath = calculateRightAnglePath(
     source,
     target,
@@ -54,6 +58,27 @@ const CustomEdge: FC<EdgeProps> = ({
     data.offset_x,
     data.offset_y
   );
+  const smartResp = getSmartEdge({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    nodes,
+  });
+  console.log('fff', smartResp)
+  let finalPath = "";
+  if (smartResp === null) {
+    finalPath = edgePath;
+    console.log('nulling', id, data)
+  } else {
+    const { edgeCenterX, edgeCenterY, svgPathString } = smartResp
+
+    finalPath = svgPathString;
+  }
+
+
 
   const edgePathId = `edgepath-${id}`;
   const markerId = `arrow-${id}`;
@@ -62,13 +87,13 @@ const CustomEdge: FC<EdgeProps> = ({
     <>
       <BaseEdge
         id={id}
-        path={edgePath}
+        path={finalPath}
         style={{ stroke: "black", strokeWidth: 4 }} // Arrow body color changed to green
         markerEnd={`url(#${markerId})`} // Reference the arrow marker
       />
       <svg width="0" height="0">
         <defs>
-          <path id={edgePathId} d={edgePath} fill="none" />
+          <path id={edgePathId} d={finalPath} fill="none" />
           <marker
             id={markerId}
             markerWidth="6" // Smaller width

@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import * as Babel from "@babel/standalone";
-import { squareComponent } from "./test";
+import { squareComponent, simpleLoginComponent } from "./test";
 import fuzzmap_plugin from "./plugins/fuzzmap";
 import Viewer from "./Viewer";
 import { FuzzerOutput, ResultMap } from "./fuzzer/types";
 import CytoViewer from "./CytoViewer";
 
 function App() {
-  const [code, setCode] = useState(squareComponent);
+  // const [code, setCode] = useState(squareComponent);
+  const [code, setCode] = useState(simpleLoginComponent);
   const [renderedComponent, setRenderedComponent] =
     useState<React.ReactElement | null>(null);
   const handleCodeChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -26,11 +27,11 @@ function App() {
         plugins: [fuzzmap_plugin],
         filename: "test.tsx",
       }).code;
-      console.log("final code", transpiledCode);
+      // console.log("final code", transpiledCode);
       const Component = new Function("React", `return (${transpiledCode})`)(
         React
       );
-      console.log("my component", Component);
+      // console.log("my component", Component);
       setRenderedComponent(<Component />);
       // wait for the component to render before fuzzing
       await new Promise((resolve) => setTimeout(resolve, 500));

@@ -38,10 +38,36 @@ export class Fuzzer {
 
   constructor() {}
 
-  private initialize() {
+  private async initialize() {
     this.last_hit_map = this.curr_hit_map;
     this.initialized = true;
-    this.ensure_state_exists(hash_hit_map(this.curr_hit_map));
+    if (!this.root_element) return;
+    const initialHtml = this.root_element.innerHTML;
+    const initialScreenshot = await html2canvas(this.root_element);
+    const hitmapHash = hash_hit_map(this.curr_hit_map);
+    this.result_map.set(
+      {
+        start_hitmap: hitmapHash,
+        action_id: -1, // -1 or another identifier for initial state
+        description: "Initial State",
+      },
+      {
+        hitmap: hitmapHash,
+        html: initialHtml,
+        img_capture: initialScreenshot.toDataURL(),
+      }
+    );
+    // console.log('new ', {
+    //   start_hitmap: hitmapHash,
+    //   action_id: -1, // -1 or another identifier for initial state
+    //   description: "Initial State",
+    // },
+    // {
+    //   hitmap: hitmapHash,
+    //   html: initialHtml,
+    //   img_capture: initialScreenshot.toDataURL(),
+    // })
+    this.ensure_state_exists(hitmapHash);
   }
 
   set_root_element(elm: HTMLElement): void {
@@ -71,7 +97,7 @@ export class Fuzzer {
     }
     if (!this.initialized) {
       console.error("not initialized yet");
-      this.initialize();
+      await this.initialize();
       // return;
     }
     const start_inputs = this.prep_inputs();
@@ -90,8 +116,10 @@ export class Fuzzer {
       });
       if (first_valid_input === -1) {
         console.error("no valid inputs");
+        console.log('WHATS LEFT', this.queue, hash_hit_map(this.curr_hit_map));
         // TODO: implement traveling to different states when we hit a dead end.
         // Need traveling to not count against fuzz results.
+        this.travel_to_first_valid();
         break;
       }
       const curr_input = this.queue.splice(first_valid_input, 1)[0];
@@ -106,11 +134,12 @@ export class Fuzzer {
           this.queue.some((i) => {
             return (
               i.action.id === input.id &&
-              isEqual(i.state, hash_hit_map(this.curr_hit_map))
+              isEqual(i.state, hash_hit_map(this.curr_hit_map)) &&
+              isEqual(i.action.options, input.options)
             );
           })
         ) {
-          console.log("dont add input twice", this.queue, this.curr_hit_map);
+          console.log("dont add input twice", this.queue, hash_hit_map(this.curr_hit_map));
           return;
         }
         // if its already in the result map, don't add it to the queue:
@@ -122,7 +151,11 @@ export class Fuzzer {
             );
           })
         ) {
-          console.log("unnecessary because in results already", this.queue, hash_hit_map(this.curr_hit_map));
+          // console.log(
+          //   "unnecessary because in results already",
+          //   this.queue,
+          //   hash_hit_map(this.curr_hit_map)
+          // );
           return;
         }
         console.log(
@@ -145,9 +178,13 @@ export class Fuzzer {
     };
   }
 
+  // This function is called when we are at a state that 
+  travel_to_first_valid() {
+    // throw new Error("Method not implemented.");
+  }
+
   private async execute_action(action: FuzzAction): Promise<void> {
     const key = {
-      // start_hitmap: hash_hit_map(this.last_hit_map),
       start_hitmap: hash_hit_map(this.last_hit_map),
       action_id: action.id,
       description: "",
@@ -164,9 +201,19 @@ export class Fuzzer {
       key.description = `radio ${action.id}: ${action.elm.innerText} to ${
         (action.elm as HTMLInputElement).checked
       }`;
+    } else if (action.type === "input") {
+      const input_elm = action.elm as HTMLInputElement;
+      const native_input_value_setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        "value"
+      )?.set;
+      console.log("we got?", native_input_value_setter);
+      native_input_value_setter?.call(input_elm, action.options?.value);
+      input_elm.dispatchEvent(new Event("input", { bubbles: true }));
+      key.description = `input ${action.id}: ${action.elm.innerText} to ${action.options?.value}`;
     }
     // TODO: better way to wait for 'static' page. (all relevant elements are loaded, etc.)
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((resolve) => setTimeout(resolve, 300));
     const curr_html = this.root_element?.innerHTML || "";
     // create screenshot of the root elm and store it in the result_map
     const screenshot = await html2canvas(this.root_element!);
@@ -207,6 +254,36 @@ export class Fuzzer {
         type: "click",
       });
     });
+    const text_inputs = document.querySelectorAll("input[type=text], input[type=password]");
+    text_inputs.forEach((input, i) => {
+      console.log("input", input);
+      const fuzz_id = input.getAttribute("data-fuzz-id");
+      if (!fuzz_id) return;
+      // for inputs, its more involved. we want to try multiple
+      // actions for each input. things like:
+      // - a string of only alphanumerics
+      // - a string of only special characters
+      // - a string of only numbers
+      // - a string of < 6 characters
+      // - a string of > 20 characters
+      [
+        "1234567890",
+        "test",
+        "!@#$%^&*()",
+        "a",
+        Math.random().toString(36).substring(2, 22),
+      ].forEach((value) => {
+        fuzz_actions.push({
+          id: i,
+          elm: input as HTMLElement,
+          type: "input",
+          options: {
+            value,
+          },
+        });
+      });
+    });
+
     const radios = document.querySelectorAll("input[type=radio]");
     radios.forEach((radio, i) => {
       const fuzz_id = radio.getAttribute("data-fuzz-id");

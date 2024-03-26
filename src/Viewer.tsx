@@ -17,27 +17,13 @@ import SelfConnecting from "./SelfConnectingEdge";
 import { FuzzerOutput, ResultMap, StateMap } from "./fuzzer/types";
 import "reactflow/dist/style.css";
 import { HandlePosition } from "./ui_types";
+import LabeledSmartEdge from "./LabeledSmartEdge";
+import { SmartStepEdge } from "@tisoap/react-flow-smart-edge";
 
 interface ClosestHandles {
   sourceHandle: HandlePosition;
   targetHandle: HandlePosition;
 }
-
-export const edge_list: any[] = [];
-
-const find_non_colliding_offset = (
-  new_edge: any,
-) => {
-  let offset_x = 0;
-  let offset_y = 0;
-  let collision_found = true;
-  while (collision_found) {
-    collision_found = false;
-    for (const edge of edge_list) {
-      if (edge.id === new_edge.id) continue;
-    }
-  }
-};
 
 const findClosestHandles = (
   nodes: Node[],
@@ -127,52 +113,52 @@ function ResultNode({
         type="target"
         position={Position.Top}
         id="t"
-        style={{ left: "30%", top: "20px" }}
+        style={{ left: "30%", top: "20px", visibility: "hidden" }}
       />
       <Handle
         type="source"
         position={Position.Top}
         id="t"
-        style={{ left: "70%", top: "20px " }}
+        style={{ left: "70%", top: "20px", visibility: "hidden" }}
       />
 
       <Handle
         type="target"
         position={Position.Right}
         id="r"
-        style={{ top: "30%" }}
+        style={{ top: "30%", visibility: "hidden" }}
       />
       <Handle
         type="source"
         position={Position.Right}
         id="r"
-        style={{ top: "70%" }}
+        style={{ top: "70%", visibility: "hidden" }}
       />
 
       <Handle
         type="target"
         position={Position.Bottom}
         id="b"
-        style={{ left: "70%" }}
+        style={{ left: "70%", visibility: "hidden" }}
       />
       <Handle
         type="source"
         position={Position.Bottom}
         id="b"
-        style={{ left: "30%" }}
+        style={{ left: "30%", visibility: "hidden" }}
       />
 
       <Handle
         type="target"
         position={Position.Left}
         id="l"
-        style={{ top: "70%" }}
+        style={{ top: "70%", visibility: "hidden" }}
       />
       <Handle
         type="source"
         position={Position.Left}
         id="l"
-        style={{ top: "30%" }}
+        style={{ top: "30%", visibility: "hidden" }}
       />
 
       <div className="-mt-6">{data.label}</div>
@@ -201,6 +187,8 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
   const edgeTypes = useMemo(
     () => ({
       custom: CustomEdge,
+      lsmart: LabeledSmartEdge,
+      ssmart: SmartStepEdge,
       selfconnecting: SelfConnecting,
     }),
     []
@@ -219,15 +207,22 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
       },
       {} as { [tick: number]: string[] }
     );
-    // console.log("state ticks", fuzz_output?.state_ticks, states_by_tick);
+    console.log("state ticks", states_by_tick);
     const new_nodes = Object.entries(states_by_tick)
       .map(([tick, state_ids]) => {
         const result: any[] = [];
         state_ids.forEach((state_id, i) => {
           // const state_index = fuzz_output.states.get(state_id)!;
           const img_data = [...fuzz_output.result_map.entries()].find(
-            ([key, value]) => key.start_hitmap === value.hitmap
+            ([key, value]) => value.hitmap === state_id
+            //  && key.start_hitmap === state_id
           )?.[1].img_capture;
+          // need to handle when theres multiple for a single state (start case)
+          // const matching = [...fuzz_output.result_map.entries()].filter(
+          //   ([key, value]) => value.hitmap === state_id
+          //   // ([key, value]) => key.start_hitmap === value.hitmap && key.start_hitmap === state_id
+          // );
+          // console.log("matching", state_id, i, matching);
           result.push({
             id: state_id,
             type: "resultNode",
@@ -269,10 +264,10 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
           color: "#FF0072",
         },
         style: {
-          strokeWidth: 2,
-          // stroke: '#FF0072',
+          strokeWidth: 3,
+          stroke: "black",
         },
-        type: key.start_hitmap === value.hitmap ? "selfconnecting" : "custom",
+        type: key.start_hitmap === value.hitmap ? "ssmart" : "ssmart",
         sourceHandle,
         targetHandle,
       };

@@ -20,6 +20,7 @@ export type FuzzAction = {
   id: number;
   elm: HTMLElement;
   type: "click" | "radio" | "input";
+  options?: Record<string, any>;
 };
 
 export type FuzzerOutput = {

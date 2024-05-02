@@ -69,6 +69,7 @@ const CustomEdge: FC<EdgeProps> = ({
   });
   console.log('fff', smartResp)
   let finalPath = "";
+  // if (true) {
   if (smartResp === null) {
     finalPath = edgePath;
     console.log('nulling', id, data)

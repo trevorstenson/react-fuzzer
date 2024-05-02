@@ -48,7 +48,6 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
         // console.log('added block stmt', path)
         path.unshiftContainer("body", hit);
         // processed.add(node_id);
-        console.log("heee");
       },
       JSXOpeningElement(path: NodePath<JSXOpeningElement>) {
         path.node.attributes.forEach((attribute) => {
@@ -64,7 +63,8 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
               if (
                 isArrowFunctionExpression(expression) &&
                 !isBlockStatement(expression.body)
-              ) {
+                ) {
+                console.log('anonymous concise body', expression.body)
                 const hitStatements = template.statements(`
                   // console.log('anonymous concise body');
                   if (typeof window !== 'undefined' && window.Fuzzer) {
@@ -84,6 +84,7 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
                 (isArrowFunctionExpression(expression) &&
                   isBlockStatement(expression.body))
               ) {
+                console.log("anonymous block body", expression);
                 const hitStatement = template.statement(`
                   // console.log('anonymous block body');
                   if (typeof window !== 'undefined' && window.Fuzzer) {
@@ -96,7 +97,7 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
 
               // Handle named functions (Identifier)
               else if (isIdentifier(expression)) {
-                // console.log("named function");
+                console.log("named function", expression);
                 const hitStatement = template.expression(`
                   function() {
                     // console.log('named function');

@@ -118,5 +118,117 @@ function simpleLoginComponent() {
     </div>
   );
 }
+`;
 
+export const buttonEasyComponent = `
+function buttonTravelComponent() {
+  const [step, setStep] = React.useState("a");
+  console.log('render button easy');
+  return (
+    <div className="h-full w-full bg-white p04">
+      {
+        step === "a" && (
+          <>
+            <h1 className="text-black">Step A</h1>
+            <button data-fuzz-id="1" onClick={() => setStep("b")} className="bg-blue-500 text-white px-4 py-2 mt-2">to B</button>
+          </>
+        )
+      }
+      {
+        step === "b" && (
+          <>
+            <h1 className="text-black">Step B</h1>
+            <button data-fuzz-id="2" onClick={() => setStep("a")} className="bg-blue-500 text-white px-4 py-2 mt-2">to A</button>
+            <button data-fuzz-id="3" onClick={() => setStep("c")} className="bg-blue-500 text-white px-4 py-2 mt-2">to C</button>
+          </>
+        )
+      }
+      {
+        step === "c" && (
+          <>
+            <h1 className="text-black">Step C</h1>
+            <button data-fuzz-id="4" onClick={() => setStep("b")} className="bg-blue-500 text-white px-4 py-2 mt-2">to B!!! from C</button>
+          </>
+        )
+      }
+    </div>
+  );
+}
+`;
+
+
+export const buttonEasyComponentOld = `
+function buttonTravelComponent() {
+  const [step, setStep] = React.useState("a");
+
+  return (
+    <div className="h-full w-full bg-white p04">
+      {
+        step === "a" && (
+          <>
+            <h1 className="text-black">Step A</h1>
+            <button data-fuzz-id="1" onClick={() => setStep("b")} className="bg-blue-500 text-white px-4 py-2 mt-2">to B</button>
+          </>
+        )
+      }
+      {
+        step === "b" && (
+          <>
+            <h1 className="text-black">Step B</h1>
+            <button data-fuzz-id="2" onClick={() => setStep("a")} className="bg-blue-500 text-white px-4 py-2 mt-2">to A</button>
+            <button data-fuzz-id="3" onClick={() => setStep("c")} className="bg-blue-500 text-white px-4 py-2 mt-2">to C</button>
+          </>
+        )
+      }
+      {
+        step === "c" && (
+          <>
+            <h1 className="text-black">Step C</h1>
+            <button data-fuzz-id="4" onClick={() => setStep("c")} className="bg-blue-500 text-white px-4 py-2 mt-2">b3</button>
+          </>
+        )
+      }
+    </div>
+  );
+}
+`;
+
+export const buttonTravelComponent = `
+function buttonTravelComponent() {
+  const [step, setStep] = React.useState("a");
+
+  return (
+    <div className="h-full w-full bg-white p04">
+      {
+        step === "a" && (
+          <>
+            <h1 className="text-black">Step A</h1>
+            <button data-fuzz-id="1" onClick={() => setStep("b")} className="bg-blue-500 text-white px-4 py-2 mt-2">b1</button>
+            <button data-fuzz-id="2" onClick={() => setStep("b")} className="bg-blue-500 text-white px-4 py-2 mt-2">b2</button>
+            <button data-fuzz-id="3" onClick={() => setStep("c")} className="bg-blue-500 text-white px-4 py-2 mt-2">b3</button>
+          </>
+        )
+      }
+      {
+        step === "b" && (
+          <>
+            <h1 className="text-black">Step B</h1>
+            <button data-fuzz-id="2" onClick={() => setStep("a")} className="bg-blue-500 text-white px-4 py-2 mt-2">b2</button>
+            <button data-fuzz-id="3" onClick={() => setStep("c")} className="bg-blue-500 text-white px-4 py-2 mt-2">b3</button>
+          </>
+        )
+      }
+      {
+        step === "c" && (
+          <>
+            <h1 className="text-black">Step C</h1>
+            <button data-fuzz-id="1" onClick={() => setStep("a")} className="bg-blue-500 text-white px-4 py-2 mt-2">b1</button>
+            <button data-fuzz-id="2" onClick={() => setStep("a")} className="bg-blue-500 text-white px-4 py-2 mt-2">b2</button>
+            <button data-fuzz-id="3" onClick={() => setStep("b")} className="bg-blue-500 text-white px-4 py-2 mt-2">b3</button>
+          </>
+            )
+      }
+    </div>
+  );
+}
 `;

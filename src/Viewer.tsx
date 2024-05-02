@@ -223,6 +223,7 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
           //   // ([key, value]) => key.start_hitmap === value.hitmap && key.start_hitmap === state_id
           // );
           // console.log("matching", state_id, i, matching);
+          // console.log('push!!!', state_id)
           result.push({
             id: state_id,
             type: "resultNode",

@@ -1,6 +1,20 @@
 export type Hitmap = Map<number, number>;
 export type HitmapHash = string;
 
+export type FuzzAction = {
+  id: number;
+  elm: HTMLElement;
+  type: "click" | "radio" | "input";
+  options?: Record<string, any>;
+};
+
+export type SerializableFuzzAction = Omit<FuzzAction, "elm">;
+
+export type RunPath = {
+  start_hitmap: HitmapHash;
+  action: SerializableFuzzAction;
+}[];
+
 export type FuzzerResultKey = {
   start_hitmap: HitmapHash;
   action_id: number;
@@ -16,18 +30,16 @@ export type FuzzerResultValue = {
 
 export type ResultMap = Map<FuzzerResultKey, FuzzerResultValue>;
 
-export type FuzzAction = {
-  id: number;
-  elm: HTMLElement;
-  type: "click" | "radio" | "input";
-  options?: Record<string, any>;
-};
-
 export type FuzzerOutput = {
   result_map: ResultMap;
   states: StateMap;
   state_ticks: Map<string, number>;
 };
+
+export type AggregateFuzzResult = {
+  run_paths: RunPath[];
+  output: FuzzerOutput; // change this
+}
 
 export type StateId = number;
 

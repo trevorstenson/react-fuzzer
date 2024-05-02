@@ -1,0 +1,26 @@
+A = 0,1 has 3 buttons
+B = 8,7 has 2 buttons
+C = 3,4 has 3 buttons
+
+A - click b1 - B  Ab1, Ab2, Ab3
+		  Ab2, Ab3
+B - click b2 - A  Ab2, Ab3 | Bb2, Bb3
+		  Ab2, Ab3 | Bb3
+A - click b2 - B  Ab2, Ab3 | Bb3
+		  Ab3 | Bb3
+B - click b3 - C  Ab3 | Bb3
+		  Ab3
+C - click b1 - A  Ab3 | Cb1, Cb2, Cb3
+		  Ab3 | Cb2, Cb3
+A - click b3 - B  Ab3 | Cb2, Cb3
+		  Cb2, Cb3
+==TRAVEL: B=>C==
+take from B an old transition to C
+in this case it is click b3
+take (B x b3)
+C - click b2 - A  Cb2, Cb3
+		  Cb3
+==TRAVEL: A=>C==
+take (A x b1), (B x b3)
+C - click b3 - B  Cb3
+		  EMPTY (COMPLETE)

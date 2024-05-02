@@ -2,18 +2,20 @@ import html2canvas from "html2canvas";
 import debounce from "lodash.debounce";
 import { isEqual } from "lodash";
 import {
+  AggregateFuzzResult,
   FuzzAction,
   FuzzerOutput,
   Hitmap,
   HitmapHash,
   ResultMap,
+  RunPath,
   StateMap,
 } from "./types";
 
-const FUZZ_INPUT = {
-  // "button":
-  // LETS O
-};
+// const FUZZ_INPUT = {
+//   // "button":
+//   // LETS O
+// };
 
 export class Fuzzer {
   root_element: HTMLElement | null = null;
@@ -21,6 +23,8 @@ export class Fuzzer {
   running: boolean = false;
   last_hit_map: Hitmap = new Map();
   curr_hit_map: Hitmap = new Map();
+  curr_run_path: RunPath = [];
+  finished_paths: RunPath[] = [];
   // not using yet:
   states: StateMap = new Map();
   // track in index to show what states were added when. ex: any state gotten to from the
@@ -39,6 +43,7 @@ export class Fuzzer {
   constructor() {}
 
   private async initialize() {
+    console.log("initializing");
     this.last_hit_map = this.curr_hit_map;
     this.initialized = true;
     if (!this.root_element) return;
@@ -79,8 +84,9 @@ export class Fuzzer {
   }, 100);
 
   hit(id: number): void {
+    // if (!this.initialized) return;
     // if (!this.running) return;
-    // console.log("history", id);
+    console.trace("hit", id);
     if (this.curr_hit_map.has(id)) {
       this.curr_hit_map.set(id, this.curr_hit_map.get(id)! + 1);
     } else {
@@ -91,12 +97,33 @@ export class Fuzzer {
     }
   }
 
+  async run(
+    n = 1,
+    reset_cb: () => Promise<void>
+  ): Promise<AggregateFuzzResult> {
+    while (n > 0) {
+      console.log("running", n);
+      await reset_cb();
+      await this.execute();
+      n--;
+    }
+    return {
+      run_paths: this.finished_paths, // TODO: might not need. go back to traveling version.
+      output: {
+        result_map: this.result_map,
+        states: this.states,
+        state_ticks: this.state_ticks,
+      },
+    };
+  }
+
   async execute(): Promise<FuzzerOutput> {
+    console.log('main execute called.')
     if (!this.root_element) {
       throw new Error("root element not set");
     }
     if (!this.initialized) {
-      console.error("not initialized yet");
+      // console.error("not initialized yet");
       await this.initialize();
       // return;
     }
@@ -110,21 +137,43 @@ export class Fuzzer {
     });
     // console.log("initial queue", structuredClone(this.queue));
     while (this.queue.length > 0) {
+      console.log(
+        "start queue",
+        JSON.parse(
+          JSON.stringify(this.queue, (k, v) => {
+            if (k.includes("react")) {
+              return undefined;
+            }
+            if (k === "elm") {
+              return v.outerHTML;
+            }
+            return v;
+          })
+        )
+      );
       // find the first entry in queue that starts from my current state, remove it, and execute:
       const first_valid_input = this.queue.findIndex((curr_input) => {
         return isEqual(curr_input.state, hash_hit_map(this.curr_hit_map));
       });
       if (first_valid_input === -1) {
         console.error("no valid inputs");
-        console.log('WHATS LEFT', this.queue, hash_hit_map(this.curr_hit_map));
-        // TODO: implement traveling to different states when we hit a dead end.
-        // Need traveling to not count against fuzz results.
-        this.travel_to_first_valid();
+        console.log("WHATS LEFT", this.queue, hash_hit_map(this.curr_hit_map));
+        // once hitting a dead end, push to finished paths and reset the state.
+        this.finished_paths.push(this.curr_run_path);
+        console.log("finished paths", this.finished_paths);
+        // // TODO: implement traveling to different states when we hit a dead end.
+        // // Need traveling to not count against fuzz results.
+        // this.travel_to_first_valid();
         break;
       }
       const curr_input = this.queue.splice(first_valid_input, 1)[0];
       console.log("EXECUTE:", hash_hit_map(this.curr_hit_map), curr_input);
       await this.execute_action(curr_input.action);
+      console.log(
+        "done executing",
+        curr_input.action,
+        hash_hit_map(this.curr_hit_map)
+      );
       // add all new inputs to the queue:
       const inputs = this.prep_inputs();
       // console.log("cur queue", structuredClone(this.queue));
@@ -139,7 +188,11 @@ export class Fuzzer {
             );
           })
         ) {
-          console.log("dont add input twice", this.queue, hash_hit_map(this.curr_hit_map));
+          console.log(
+            "dont add input twice",
+            this.queue,
+            hash_hit_map(this.curr_hit_map)
+          );
           return;
         }
         // if its already in the result map, don't add it to the queue:
@@ -169,6 +222,21 @@ export class Fuzzer {
           action: input,
         });
       });
+      console.log(
+        "end queue",
+        JSON.parse(
+          JSON.stringify(this.queue, (k, v) => {
+            if (k.includes("react")) {
+              return undefined;
+            }
+            if (k === "elm") {
+              return v.outerHTML;
+            }
+            return v;
+          })
+        )
+      );
+      // debugger;
     }
     // this.finish();
     return {
@@ -178,7 +246,41 @@ export class Fuzzer {
     };
   }
 
-  // This function is called when we are at a state that 
+  // builds the run path from the current state
+  private build_run_path(): RunPath {
+    // first push start state and initial action
+    const run_path: RunPath = [];
+    // iterate over state ticks in order to build the run path. first sort
+    // the state ticks by their value (should go from 0 to n)
+    // const sorted_state_ticks = [...this.state_ticks.entries()].sort(
+    //   (a, b) => a[1] - b[1]
+    // );
+    // sorted_state_ticks.forEach(([state_hash, tick]) => {
+    //   // find the action that led to this state
+    //   const action = [...this.result_map.keys()].find((key) => {
+    //     return key.start_hitmap === state_hash;
+    //   });
+    //   if (!action) {
+    //     console.error("no action found for state", state_hash);
+    //     return;
+    //   }
+    //   run_path.push({
+    //     start_hitmap: state_hash,
+    //     action: {
+    //       id: action.action_id,
+    //       type: action.description.split(" ")[0] as FuzzAction["type"],
+    //       options: {
+    //         value: action.description.split(" ").slice(-1)[0],
+    //       },
+    //     },
+    //   });
+    // });
+
+    // console.log("run path", run_path);
+    return run_path;
+  }
+
+  // This function is called when we are at a state that
   travel_to_first_valid() {
     // throw new Error("Method not implemented.");
   }
@@ -190,8 +292,20 @@ export class Fuzzer {
       description: "",
     };
     this.last_hit_map = this.curr_hit_map;
+    console.log(
+      "clearing hit map while at state",
+      hash_hit_map(this.curr_hit_map)
+    );
     this.curr_hit_map.clear();
     if (action.type === "click") {
+      const elm = document.querySelector(`[data-fuzz-id="${action.id}"]`);
+      // console.log("raw click", action.elm.outerHTML, action.id);
+      // debugger;
+      if (!elm) {
+        console.error("no element found for id", action.id);
+        return;
+      }
+      (elm as HTMLElement).click();
       action.elm.click(); // change to find elm here i imagine...
       key.description = `click ${action.id}: ${action.elm.innerText}`;
     } else if (action.type === "radio") {
@@ -212,8 +326,17 @@ export class Fuzzer {
       input_elm.dispatchEvent(new Event("input", { bubbles: true }));
       key.description = `input ${action.id}: ${action.elm.innerText} to ${action.options?.value}`;
     }
+    this.curr_run_path.push({
+      start_hitmap: key.start_hitmap,
+      action: {
+        id: action.id,
+        type: action.type,
+        options: action.options,
+      },
+    });
     // TODO: better way to wait for 'static' page. (all relevant elements are loaded, etc.)
     await new Promise((resolve) => setTimeout(resolve, 300));
+    // debugger;
     const curr_html = this.root_element?.innerHTML || "";
     // create screenshot of the root elm and store it in the result_map
     const screenshot = await html2canvas(this.root_element!);
@@ -249,12 +372,17 @@ export class Fuzzer {
         return;
       }
       fuzz_actions.push({
-        id: i,
+        // TODO: ALL OF THIS IS PROBLEMATIC / IMPORTANT!!!
+        // convert to number to ensure its a number
+        id: parseInt(fuzz_id),
+        // id: i,
         elm: button,
         type: "click",
       });
     });
-    const text_inputs = document.querySelectorAll("input[type=text], input[type=password]");
+    const text_inputs = document.querySelectorAll(
+      "input[type=text], input[type=password]"
+    );
     text_inputs.forEach((input, i) => {
       console.log("input", input);
       const fuzz_id = input.getAttribute("data-fuzz-id");
@@ -331,13 +459,16 @@ export class Fuzzer {
     // this.last_hit_map = this.curr_hit_map;
     this.curr_hit_map.clear();
     this.last_hit_map.clear();
+    this.curr_run_path = [];
     this.queue = [];
     this.states.clear();
   }
 }
 
 function hash_hit_map(hit_map: Hitmap): HitmapHash {
+  console.log('init', hit_map)
   const clamped = clamp_hit_map(hit_map);
+  // console.log('HHHC', hit_map, clamped)
   // simple way to reliably hash the hitmap to allow for equality checks
   // return [...hit_map.entries()].join(",");
   return [...clamped.entries()].join(",");

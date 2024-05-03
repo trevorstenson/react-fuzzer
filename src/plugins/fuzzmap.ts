@@ -53,27 +53,9 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
         let hit;
         if (click_handler_stack.length === 0) {
           // console.log("not in ch stack!!!!", path.toString());
-          // hit = template(
-          //   `
-          //     if (window.Fuzzer) {
-          //       window.Fuzzer.hit(HIT_ID, 'load');
-          //     }
-          //   `
-          // )({
-          //   HIT_ID: numericLiteral(curr_hit_id++),
-          // });
           hit = next_fuzzer_stmt('load');
         } else {
           hit = next_fuzzer_stmt();
-          // hit = template(
-          //   `
-          //     if (window.Fuzzer) {
-          //       window.Fuzzer.hit(HIT_ID);
-          //     }
-          //   `
-          // )({
-          //   HIT_ID: numericLiteral(curr_hit_id++),
-          // });
         }
         if (hit instanceof Array) {
           hit.forEach((node) => {
@@ -142,14 +124,7 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
                 !isBlockStatement(expression.body)
               ) {
                 console.log("anonymous concise body", expression.body);
-                // const hitStatements = template.statements(`
-                //   // console.log('anonymous concise body');
-                //   if (typeof window !== 'undefined' && window.Fuzzer) {
-                //     window.Fuzzer.hit(HIT_ID);
-                //   }
-                // `)({ HIT_ID: numericLiteral(curr_hit_id++) });
                 const hit_stmt = next_fuzzer_stmt();
-
                 expression.body = blockStatement([
                   hit_stmt,
                   returnStatement(expression.body),
@@ -163,12 +138,6 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
                   isBlockStatement(expression.body))
               ) {
                 console.log("anonymous block body", expression);
-                // const hitStatement = template.statement(`
-                //   // console.log('anonymous block body');
-                //   if (typeof window !== 'undefined' && window.Fuzzer) {
-                //     window.Fuzzer.hit(HIT_ID);
-                //   }
-                // `)({ HIT_ID: numericLiteral(curr_hit_id++) });
                 const hit_stmt = next_fuzzer_stmt();
 
                 expression.body.body.unshift(hit_stmt);

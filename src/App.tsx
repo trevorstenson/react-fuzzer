@@ -43,9 +43,12 @@ function App() {
       );
       // console.log("my component", Component);
       // wait for the component to render before fuzzing
-      setRenderedComponent(<Component />);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const results = await window.Fuzzer?.execute();
+      // setRenderedComponent(<Component />);
+      // await new Promise((resolve) => setTimeout(resolve, 1000));
+      const results = await window.Fuzzer?.execute(() => {
+        setRenderedComponent(<Component />);
+      
+      });
       console.log("wwww", results);
       // console.log("new_results", new_results);
       setFuzzOutput(results);

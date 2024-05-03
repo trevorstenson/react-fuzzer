@@ -43,13 +43,14 @@ export class Fuzzer {
   constructor() {}
 
   private async initialize() {
-    console.log("initializing");
+    // console.log("initializing");
     this.last_hit_map = this.curr_hit_map;
     this.initialized = true;
     if (!this.root_element) return;
     const initialHtml = this.root_element.innerHTML;
     const initialScreenshot = await html2canvas(this.root_element);
     const hitmapHash = hash_hit_map(this.curr_hit_map);
+    console.log("base hash", hitmapHash);
     this.result_map.set(
       {
         start_hitmap: hitmapHash,
@@ -83,10 +84,14 @@ export class Fuzzer {
     this.initialize();
   }, 100);
 
-  hit(id: number): void {
+  hit(id: number, type?: string): void {
     // if (!this.initialized) return;
     // if (!this.running) return;
     console.trace("hit", id);
+    if (type) {
+      console.log('WITH:', type)
+      // return;
+    }
     if (this.curr_hit_map.has(id)) {
       this.curr_hit_map.set(id, this.curr_hit_map.get(id)! + 1);
     } else {
@@ -117,8 +122,11 @@ export class Fuzzer {
     };
   }
 
-  async execute(): Promise<FuzzerOutput> {
+  async execute(startup: () => void): Promise<FuzzerOutput> {
     console.log('main execute called.')
+    startup();
+    // wait 1s
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     if (!this.root_element) {
       throw new Error("root element not set");
     }

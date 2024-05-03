@@ -9,13 +9,37 @@ import {
   isIdentifier,
   isBlockStatement,
   numericLiteral,
+  stringLiteral,
   returnStatement,
   blockStatement,
   JSXOpeningElement,
+  isLogicalExpression,
+  // callExpression,
+  // memberExpression,
+  // identifier,
+  logicalExpression,
+  sequenceExpression,
+  jsxExpressionContainer,
 } from "@babel/types";
+
+const next_fuzzer_stmt = (type?: string) => {
+  return template.statement(
+    `
+    // if (typeof window !== 'undefined') {
+      if (window.Fuzzer) {
+        window.Fuzzer.hit(HIT_ID, TYPE);
+      }
+      // }
+    `
+  )({
+    HIT_ID: numericLiteral(curr_hit_id++),
+   TYPE: stringLiteral(type || ''),
+  });
+};
 
 let curr_hit_id = 0;
 const processed = new Set();
+const click_handler_stack: boolean[] = [];
 
 const fuzzmap_plugin = (): PluginObj<PluginPass> => {
   return {
@@ -26,18 +50,31 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
         if (processed.has(node_id)) {
           return;
         }
-        const hit = template(
-          `
-            // if (typeof window !== 'undefined') {
-              if (window.Fuzzer) {
-                window.Fuzzer.hit(HIT_ID);
-              }
-            // }
-          `
-        )({
-          HIT_ID: numericLiteral(curr_hit_id++),
-        });
-        // save newly made hit() template node ids to processed:
+        let hit;
+        if (click_handler_stack.length === 0) {
+          // console.log("not in ch stack!!!!", path.toString());
+          // hit = template(
+          //   `
+          //     if (window.Fuzzer) {
+          //       window.Fuzzer.hit(HIT_ID, 'load');
+          //     }
+          //   `
+          // )({
+          //   HIT_ID: numericLiteral(curr_hit_id++),
+          // });
+          hit = next_fuzzer_stmt('load');
+        } else {
+          hit = next_fuzzer_stmt();
+          // hit = template(
+          //   `
+          //     if (window.Fuzzer) {
+          //       window.Fuzzer.hit(HIT_ID);
+          //     }
+          //   `
+          // )({
+          //   HIT_ID: numericLiteral(curr_hit_id++),
+          // });
+        }
         if (hit instanceof Array) {
           hit.forEach((node) => {
             processed.add(node.start);
@@ -49,7 +86,47 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
         path.unshiftContainer("body", hit);
         // processed.add(node_id);
       },
+      JSXExpressionContainer(path) {
+        const expr = path.node.expression;
+        if (!(isLogicalExpression(expr) && expr.operator === "&&")) return;
+        if (processed.has(expr)) return;
+        processed.add(expr);
+        // convert: expr && <jsx>
+        // to: expr && (window.Fuzzer && window.Fuzzer.hit(HIT_ID) && <jsx>)
+        const hit_expr = template.expression(
+          `(window.Fuzzer && window.Fuzzer.hit(HIT_ID))`
+        )({
+          HIT_ID: numericLiteral(curr_hit_id++),
+        });
+        const new_expr = logicalExpression(
+          "&&",
+          expr.left,
+          sequenceExpression([hit_expr, expr.right])
+        );
+        processed.add(new_expr);
+        // Replace the existing JSX expression container with the new logical expression
+        path.replaceWith(jsxExpressionContainer(new_expr));
+      },
       JSXOpeningElement(path: NodePath<JSXOpeningElement>) {
+        const on_click_attr = path.node.attributes.find(
+          (attr) =>
+            isJSXAttribute(attr) &&
+            isJSXIdentifier(attr.name) &&
+            attr.name.name === "onClick"
+        );
+        if (on_click_attr) {
+          click_handler_stack.push(true);
+          path.traverse({
+            JSXAttribute(attr_path) {
+              if (attr_path.node === on_click_attr) {
+                attr_path.stop();
+              }
+            },
+            exit() {
+              click_handler_stack.pop();
+            },
+          });
+        }
         path.node.attributes.forEach((attribute) => {
           if (
             isJSXAttribute(attribute) &&
@@ -63,17 +140,18 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
               if (
                 isArrowFunctionExpression(expression) &&
                 !isBlockStatement(expression.body)
-                ) {
-                console.log('anonymous concise body', expression.body)
-                const hitStatements = template.statements(`
-                  // console.log('anonymous concise body');
-                  if (typeof window !== 'undefined' && window.Fuzzer) {
-                    window.Fuzzer.hit(HIT_ID);
-                  }
-                `)({ HIT_ID: numericLiteral(curr_hit_id++) });
+              ) {
+                console.log("anonymous concise body", expression.body);
+                // const hitStatements = template.statements(`
+                //   // console.log('anonymous concise body');
+                //   if (typeof window !== 'undefined' && window.Fuzzer) {
+                //     window.Fuzzer.hit(HIT_ID);
+                //   }
+                // `)({ HIT_ID: numericLiteral(curr_hit_id++) });
+                const hit_stmt = next_fuzzer_stmt();
 
                 expression.body = blockStatement([
-                  ...hitStatements,
+                  hit_stmt,
                   returnStatement(expression.body),
                 ]);
                 expression.expression = false; // Convert from concise body to block body
@@ -85,14 +163,15 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
                   isBlockStatement(expression.body))
               ) {
                 console.log("anonymous block body", expression);
-                const hitStatement = template.statement(`
-                  // console.log('anonymous block body');
-                  if (typeof window !== 'undefined' && window.Fuzzer) {
-                    window.Fuzzer.hit(HIT_ID);
-                  }
-                `)({ HIT_ID: numericLiteral(curr_hit_id++) });
+                // const hitStatement = template.statement(`
+                //   // console.log('anonymous block body');
+                //   if (typeof window !== 'undefined' && window.Fuzzer) {
+                //     window.Fuzzer.hit(HIT_ID);
+                //   }
+                // `)({ HIT_ID: numericLiteral(curr_hit_id++) });
+                const hit_stmt = next_fuzzer_stmt();
 
-                expression.body.body.unshift(hitStatement);
+                expression.body.body.unshift(hit_stmt);
               }
 
               // Handle named functions (Identifier)

@@ -115,6 +115,7 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
             isJSXIdentifier(attribute.name) &&
             attribute.name.name === "onClick"
           ) {
+            return;
             if (attribute.value && isJSXExpressionContainer(attribute.value)) {
               const expression = attribute.value.expression;
               // console.log("i am concise body", expression);

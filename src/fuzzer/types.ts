@@ -2,17 +2,18 @@ export type Hitmap = Map<number, number>;
 export type HitmapHash = string;
 
 export type FuzzAction = {
-  id: number;
-  elm: HTMLElement;
+  // id: number;
+  elm_id: number;
+  // elm: HTMLElement;
   type: "click" | "radio" | "input";
   options?: Record<string, any>;
 };
 
-export type SerializableFuzzAction = Omit<FuzzAction, "elm">;
+// export type SerializableFuzzAction = Omit<FuzzAction, "elm">;
 
 export type RunPath = {
   start_hitmap: HitmapHash;
-  action: SerializableFuzzAction;
+  action: FuzzAction;
 }[];
 
 export type FuzzerResultKey = {

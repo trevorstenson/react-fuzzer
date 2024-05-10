@@ -7,9 +7,9 @@ import { FuzzerOutput, ResultMap } from "./fuzzer/types";
 import CytoViewer from "./CytoViewer";
 
 function App() {
-  // const [code, setCode] = useState(squareComponent);
+  const [code, setCode] = useState(squareComponent);
   // const [code, setCode] = useState(simpleLoginComponent);
-  const [code, setCode] = useState(buttonEasyComponent);
+  // const [code, setCode] = useState(buttonEasyComponent);
   const [renderedComponent, setRenderedComponent] =
     useState<React.ReactElement | null>(null);
   const handleCodeChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {

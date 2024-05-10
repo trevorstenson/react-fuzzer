@@ -85,15 +85,15 @@ export class Fuzzer {
     this.initialize();
   }, 100);
 
-  hit(id: number, type?: string): void {
-    if (this.traveling) return;
+  hit(id: number, _): void {
+    // if (this.traveling) return;
     // if (!this.initialized) return;
     // if (!this.running) return;
     console.log("hit", id);
-    if (type) {
-      console.log("WITH:", type);
-      // return;
-    }
+    // if (type) {
+    //   console.log("WITH:", type);
+    //   // return;
+    // }
     if (this.curr_hit_map.has(id)) {
       this.curr_hit_map.set(id, this.curr_hit_map.get(id)! + 1);
     } else {
@@ -177,7 +177,7 @@ export class Fuzzer {
         first_valid_input = this.queue.findIndex((curr_input) => {
           return isEqual(curr_input.state, hash_hit_map(this.curr_hit_map));
         });
-        if (!first_valid_input) {
+        if (first_valid_input === -1) {
           console.error("no valid inputs found");
           break;
         }
@@ -319,7 +319,7 @@ export class Fuzzer {
     // execute the path
     for (const step of path) {
       console.log("travel ex", step.action);
-      await this.execute_action(step.action, step.start_hitmap);
+      await this.execute_action(step.action);
     }
     this.traveling = false;
     console.log("just finished traveling");
@@ -329,6 +329,7 @@ export class Fuzzer {
     start: HitmapHash,
     end: HitmapHash
   ): RunPath {
+    console.log("find path btwn", start, end, hash_hit_map(this.curr_hit_map));
     // use run path information to find a path between two states
     // find index of end state in run_path
     const end_index =
@@ -340,7 +341,7 @@ export class Fuzzer {
     );
     console.log("start index", start_index);
     // find the path between the two states
-    const path = this.curr_run_path.slice(start_index, end_index);
+    const path = this.curr_run_path.slice(start_index, end_index - 1);
     console.log("found path", path);
     return path;
   }
@@ -377,9 +378,27 @@ export class Fuzzer {
       elm.click();
       key.description = `click ${action.elm_id}: ${elm.innerText}`;
     } else if (action.type === "radio") {
-      (elm as HTMLInputElement).checked = !(
-        elm as HTMLInputElement
-      ).checked;
+      (elm as HTMLInputElement).checked = !(elm as HTMLInputElement).checked;
+      const event = new Event("change", { bubbles: true });
+      const prop_name = "onChange";
+      const react_propname = Object.keys(elm).find((key) =>
+        key.startsWith("__reactProps$")
+      );
+      if (react_propname) {
+        const react_events = (elm as any)[react_propname];
+        if (react_events && react_events[prop_name]) {
+          react_events[prop_name](event);
+        }
+      } else {
+        elm.dispatchEvent(event);
+      }
+      // const native_input_value_setter = Object.getOwnPropertyDescriptor(
+      //   window.HTMLInputElement.prototype,
+      //   "checked"
+      // )?.set;
+      // console.log("we got?", native_input_value_setter);
+      // native_input_value_setter?.call(elm, (elm as HTMLInputElement).checked);
+      // (elm as HTMLInputElement).dispatchEvent(new Event("change", { bubbles: true }));
       key.description = `radio ${action.elm_id}: ${elm.innerText} to ${
         (elm as HTMLInputElement).checked
       }`;
@@ -391,7 +410,6 @@ export class Fuzzer {
         window.HTMLInputElement.prototype,
         "value"
       )?.set;
-      console.log("we got?", native_input_value_setter);
       native_input_value_setter?.call(input_elm, action.options?.value);
       input_elm.dispatchEvent(new Event("input", { bubbles: true }));
       key.description = `input ${action.elm_id}: ${elm.innerText} to ${action.options?.value}`;
@@ -534,13 +552,15 @@ export class Fuzzer {
   }
 }
 
-function hash_hit_map(hit_map: Hitmap): HitmapHash {
+function hash_hit_map(hit_map: Hitmap, clamp = true): HitmapHash {
   console.log("init", hit_map);
-  const clamped = clamp_hit_map(hit_map);
+  if (clamp) {
+    hit_map = clamp_hit_map(hit_map);
+  }
   // console.log('HHHC', hit_map, clamped)
   // simple way to reliably hash the hitmap to allow for equality checks
   // return [...hit_map.entries()].join(",");
-  return [...clamped.entries()].join(",");
+  return [...hit_map.entries()].join(",");
 }
 
 function unhash_hit_map(hash: HitmapHash): Hitmap {

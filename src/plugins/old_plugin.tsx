@@ -1,17 +1,17 @@
-import template from "@babel/template";
+import template, { program } from "@babel/template";
 import { NodePath, PluginObj, PluginPass } from "@babel/core";
 import {
   isJSXAttribute,
+  isJSXExpressionContainer,
   isJSXIdentifier,
-  // isJSXExpressionContainer,
-  // isFunctionExpression,
-  // isArrowFunctionExpression,
-  // isIdentifier,
-  // isBlockStatement,
+  isFunctionExpression,
+  isArrowFunctionExpression,
+  isIdentifier,
+  isBlockStatement,
   numericLiteral,
-  // stringLiteral,
-  // returnStatement,
-  // blockStatement,
+  stringLiteral,
+  returnStatement,
+  blockStatement,
   JSXOpeningElement,
   isLogicalExpression,
   // callExpression,
@@ -45,7 +45,20 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
   return {
     name: "fuzzmap",
     visitor: {
+      Function(path) {
+        if (is_event_handler(path)) {
+          return;
+        }
+        const hit_stmt = next_fuzzer_stmt();
+        if (isBlockStatement(path.node.body)) {
+          path.node.body.body.unshift(hit_stmt);
+        } else {
+          const body = blockStatement([hit_stmt, returnStatement(path.node.body)]);
+          path.node.body = body;
+        }
+      },
       BlockStatement(path) {
+        return;
         const node_id = path.node.start;
         if (processed.has(node_id)) {
           return;
@@ -54,6 +67,12 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
           return;
         }
         const hit = next_fuzzer_stmt();
+        // if (click_handler_stack.length === 0) {
+        //   // console.log("not in ch stack!!!!", path.toString());
+        //   hit = next_fuzzer_stmt('load');
+        // } else {
+        //   hit = next_fuzzer_stmt();
+        // }
         if (hit instanceof Array) {
           hit.forEach((node) => {
             processed.add(node.start);
@@ -66,6 +85,7 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
         // processed.add(node_id);
       },
       JSXExpressionContainer(path) {
+        return;
         const expr = path.node.expression;
         if (!(isLogicalExpression(expr) && expr.operator === "&&")) return;
         if (processed.has(expr)) return;
@@ -87,6 +107,25 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
         path.replaceWith(jsxExpressionContainer(new_expr));
       },
       JSXOpeningElement(path: NodePath<JSXOpeningElement>) {
+        // if (path.node.name && isJSXIdentifier(path.node.name) && path.node.name.name !== 'input') {
+        //   const hitStatement = next_fuzzer_stmt();
+      
+        //   // Find the closest parent function or block to insert the statement
+        //   let currentPath = path;
+        //   while (currentPath && !isBlockStatement(currentPath.node)) {
+        //     currentPath = currentPath.parentPath;
+        //   }
+      
+        //   if (currentPath && isBlockStatement(currentPath.node)) {
+        //     // Insert the hit statement at the beginning of the block
+        //     currentPath.node.body.unshift(hitStatement);
+        //   } else {
+        //     // If no block statement context is found, consider alternatives such as wrapping
+        //     console.error("No valid insertion point found for the hit statement.");
+        //   }
+        // }
+        // return;
+        return;
         const on_click_attr = path.node.attributes.find(
           (attr) =>
             isJSXAttribute(attr) &&
@@ -169,5 +208,11 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
     },
   };
 };
+
+function is_event_handler(path: any) {
+  // Simple heuristic to detect if a function is an event handler
+  return path.node.key && path.node.key.name &&
+         (path.node.key.name.startsWith('handle') || path.node.key.name.startsWith('on'));
+}
 
 export default fuzzmap_plugin;

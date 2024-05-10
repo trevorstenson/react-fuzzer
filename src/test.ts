@@ -12,7 +12,6 @@ export const squareComponent = `function squareComponent() {
     setShowText(!showText)
   }
 
-
   return (
     <div className=" h-full w-full bg-white">
       <div className="flex flex-row">
@@ -22,6 +21,7 @@ export const squareComponent = `function squareComponent() {
       </div>
       <label className="text-black">
         <input
+          data-fuzz-id="4"
           type="radio"
           name="show_text"
           onChange={handleCheckedRadio}

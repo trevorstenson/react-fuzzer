@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import ReactFlow, {
   Controls,
   MiniMap,
@@ -37,9 +37,6 @@ const findClosestHandles = (
     return null;
   }
 
-  // Basic logic for determining the closest handles
-  // This example compares the X coordinates of the nodes
-  // You can enhance this logic based on your layout and requirements
   let sourceHandle: HandlePosition;
   let targetHandle: HandlePosition;
 
@@ -72,26 +69,6 @@ const findClosestHandles = (
       targetHandle = "r";
     }
   }
-
-  // if (deltaX > deltaY) {
-  //   // Nodes are further apart horizontally, use left/right handles
-  //   if (sourceNode.position.x < targetNode.position.x) {
-  //     sourceHandle = 'r';
-  //     targetHandle = 'l';
-  //   } else {
-  //     sourceHandle = 'l';
-  //     targetHandle = 'r';
-  //   }
-  // } else {
-  //   // Nodes are further apart vertically, use top/bottom handles
-  //   if (sourceNode.position.y < targetNode.position.y) {
-  //     sourceHandle = 'b';
-  //     targetHandle = 't';
-  //   } else {
-  //     sourceHandle = 't';
-  //     targetHandle = 'b';
-  //   }
-  // }
 
   // Add more logic here if you want to consider Y coordinates for 't' and 'b' handles
 
@@ -196,8 +173,8 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
 
   useEffect(() => {
     if (!fuzz_output) return;
-    const states_by_tick = [...fuzz_output.states.entries()].reduce(
-      (acc, [key, value]) => {
+    const states_by_tick = [...fuzz_output.states.keys()].reduce(
+      (acc, key) => {
         const tick = fuzz_output.state_ticks.get(key) ?? 0;
         if (!acc[tick]) {
           acc[tick] = [];
@@ -207,27 +184,19 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
       },
       {} as { [tick: number]: string[] }
     );
-    console.log("state ticks", states_by_tick);
     const new_nodes = Object.entries(states_by_tick)
       .map(([tick, state_ids]) => {
         const result: any[] = [];
         state_ids.forEach((state_id, i) => {
-          // const state_index = fuzz_output.states.get(state_id)!;
-          const img_data = [...fuzz_output.result_map.entries()].find(
-            ([key, value]) => value.hitmap === state_id
+          const img_data = [...fuzz_output.result_map.values()].find(
+            (value) => value.hitmap === state_id
             //  && key.start_hitmap === state_id
-          )?.[1].img_capture;
-          // need to handle when theres multiple for a single state (start case)
-          // const matching = [...fuzz_output.result_map.entries()].filter(
-          //   ([key, value]) => value.hitmap === state_id
-          //   // ([key, value]) => key.start_hitmap === value.hitmap && key.start_hitmap === state_id
-          // );
-          // console.log("matching", state_id, i, matching);
-          // console.log('push!!!', state_id)
+          )?.img_capture;
+          const state_uniq = fuzz_output.states.get(state_id) ?? 0;
           result.push({
             id: state_id,
             type: "resultNode",
-            data: { label: state_id || "Start", img_data: img_data },
+            data: { label: state_uniq || "Start", img_data: img_data },
             position: {
               // x: 500 * (parseInt(tick) ?? 0),
               // y: 300 * i + 25,
@@ -242,7 +211,6 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
         return result;
       })
       .flat();
-    // console.log("new nodes", new_nodes);
     setNodes(new_nodes);
     const edges = [...fuzz_output.result_map.entries()].map(([key, value]) => {
       const { sourceHandle, targetHandle } =
@@ -275,7 +243,7 @@ function Viewer({ fuzz_output }: { fuzz_output: FuzzerOutput | null }) {
       return edge;
     });
     setEdges(edges);
-    console.log("edges", edges);
+    // console.log("edges", edges);
   }, [fuzz_output, setEdges, setNodes]);
 
   if (!fuzz_output) return null;

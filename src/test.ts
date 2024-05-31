@@ -123,7 +123,7 @@ function simpleLoginComponent() {
 export const buttonEasyComponent = `
 function buttonTravelComponent() {
   const [step, setStep] = React.useState("a");
-  console.log('render button easy');
+
   return (
     <div className="h-full w-full bg-white p04">
       {

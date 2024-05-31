@@ -1,8 +1,7 @@
-import React, { FC, useState } from "react";
+import React, { FC } from "react";
 import { EdgeProps, getBezierPath, BaseEdge, useNodes } from "reactflow";
 import { HandlePosition } from "./ui_types";
 import { getSmartEdge } from "@tisoap/react-flow-smart-edge";
-// import { edge_list } from "./Viewer";
 type Point = {
   x: number;
   y: number;
@@ -67,9 +66,7 @@ const CustomEdge: FC<EdgeProps> = ({
     targetPosition,
     nodes,
   });
-  console.log('fff', smartResp)
   let finalPath = "";
-  // if (true) {
   if (smartResp === null) {
     finalPath = edgePath;
     console.log('nulling', id, data)
@@ -124,12 +121,6 @@ const CustomEdge: FC<EdgeProps> = ({
           </text>
         </svg>
       </foreignObject>
-      {/* <foreignObject width="100" height="50" x={(sourceX + targetX) / 2 - 50} y={(sourceY + targetY) / 2 - 25}>
-        <div xmlns="http://www.w3.org/1999/xhtml" className="edge-label">
-          <div className="edge-icon">&#x1F5B1;</div>
-          <div className="edge-text">{data.label}</div>
-        </div>
-      </foreignObject> */}
     </>
   );
 };

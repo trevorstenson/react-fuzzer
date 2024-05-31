@@ -3,20 +3,9 @@ import { NodePath, PluginObj, PluginPass } from "@babel/core";
 import {
   isJSXAttribute,
   isJSXIdentifier,
-  // isJSXExpressionContainer,
-  // isFunctionExpression,
-  // isArrowFunctionExpression,
-  // isIdentifier,
-  // isBlockStatement,
   numericLiteral,
-  // stringLiteral,
-  // returnStatement,
-  // blockStatement,
   JSXOpeningElement,
   isLogicalExpression,
-  // callExpression,
-  // memberExpression,
-  // identifier,
   logicalExpression,
   sequenceExpression,
   jsxExpressionContainer,
@@ -25,15 +14,10 @@ import {
 const next_fuzzer_stmt = () => {
   return template.statement(
     `
-    // if (typeof window !== 'undefined') {
-      if (window.Fuzzer) {
-        window.Fuzzer.hit(HIT_ID);
-      }
-      // }
+      window.Fuzzer?.hit(HIT_ID);
     `
   )({
     HIT_ID: numericLiteral(curr_hit_id++),
-  //  TYPE: stringLiteral(type || ''),
   });
 };
 
@@ -61,9 +45,7 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
         } else {
           processed.add(hit.start);
         }
-        // console.log('added block stmt', path)
         path.unshiftContainer("body", hit);
-        // processed.add(node_id);
       },
       JSXExpressionContainer(path) {
         const expr = path.node.expression;
@@ -73,7 +55,7 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
         // convert: expr && <jsx>
         // to: expr && (window.Fuzzer && window.Fuzzer.hit(HIT_ID) && <jsx>)
         const hit_expr = template.expression(
-          `(window.Fuzzer && window.Fuzzer.hit(HIT_ID))`
+          `window.Fuzzer?.hit(HIT_ID)`
         )({
           HIT_ID: numericLiteral(curr_hit_id++),
         });
@@ -83,7 +65,7 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
           sequenceExpression([hit_expr, expr.right])
         );
         processed.add(new_expr);
-        // Replace the existing JSX expression container with the new logical expression
+        // replace the existing JSX expression container with the new logical expression
         path.replaceWith(jsxExpressionContainer(new_expr));
       },
       JSXOpeningElement(path: NodePath<JSXOpeningElement>) {
@@ -99,72 +81,11 @@ const fuzzmap_plugin = (): PluginObj<PluginPass> => {
             BlockStatement(block_path) {
               processed.add(block_path.node.start);
             },
-            // JSXAttribute(attr_path) {
-            //   if (attr_path.node === on_click_attr) {
-            //     attr_path.stop();
-            //   }
-            // },
             exit() {
               click_handler_stack.pop();
             },
           });
         }
-        // path.node.attributes.forEach((attribute) => {
-        //   if (
-        //     isJSXAttribute(attribute) &&
-        //     isJSXIdentifier(attribute.name) &&
-        //     attribute.name.name === "onClick"
-        //   ) {
-        //     return;
-        //     if (attribute.value && isJSXExpressionContainer(attribute.value)) {
-        //       const expression = attribute.value.expression;
-        //       // console.log("i am concise body", expression);
-        //       // Handle anonymous functions with concise body
-        //       if (
-        //         isArrowFunctionExpression(expression) &&
-        //         !isBlockStatement(expression.body)
-        //       ) {
-        //         console.log("anonymous concise body", expression.body);
-        //         const hit_stmt = next_fuzzer_stmt();
-        //         expression.body = blockStatement([
-        //           hit_stmt,
-        //           returnStatement(expression.body),
-        //         ]);
-        //         expression.expression = false; // Convert from concise body to block body
-        //       }
-        //       // Handle anonymous functions (FunctionExpression or ArrowFunctionExpression) with block body
-        //       else if (
-        //         isFunctionExpression(expression) ||
-        //         (isArrowFunctionExpression(expression) &&
-        //           isBlockStatement(expression.body))
-        //       ) {
-        //         console.log("anonymous block body", expression);
-        //         const hit_stmt = next_fuzzer_stmt();
-
-        //         expression.body.body.unshift(hit_stmt);
-        //       }
-
-        //       // Handle named functions (Identifier)
-        //       else if (isIdentifier(expression)) {
-        //         console.log("named function", expression);
-        //         const hitStatement = template.expression(`
-        //           function() {
-        //             // console.log('named function');
-        //             if (typeof window !== 'undefined' && window.Fuzzer) {
-        //               window.Fuzzer.hit(HIT_ID);
-        //             }
-        //             return ORIGINAL_IDENTIFIER();
-        //           }
-        //         `)({
-        //           HIT_ID: numericLiteral(curr_hit_id++),
-        //           ORIGINAL_IDENTIFIER: expression,
-        //         });
-
-        //         attribute.value.expression = hitStatement;
-        //       }
-        //     }
-        //   }
-        // });
       },
     },
   };
